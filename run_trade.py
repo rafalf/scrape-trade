@@ -22,10 +22,11 @@ class Scrape:
     def __init__(self):
 
         self.site_url = 'https://www.iextrading.com/apps/tops/'
+        self.csv_file = None
         if platform == 'darwin':  # OSX
             self.driver = webdriver.Chrome()
         else:
-            self.driver = webdriver.Chrome('C:\gitprojects\drivers\chromedriver.exe')
+            self.driver = webdriver.Chrome('chromedriver.exe')
 
     def scrape_soup(self, r):
 
@@ -33,6 +34,9 @@ class Scrape:
 
         if r:
             self._select_report(r)
+            self.csv_file = "{}_{}.csv".format(time.strftime("%Y%m%d%H%M", time.localtime()), r)
+        else:
+            self.csv_file = "{}_{}.csv".format(time.strftime("%Y%m%d%H%M", time.localtime()), 'top')
 
         for _ in range(60):
             page_source = self.driver.page_source
@@ -46,6 +50,14 @@ class Scrape:
                 time.sleep(1)
         else:
             logger.info('Did not scrape table. Is the site live?')
+            sys.exit(1)
+
+        self._write_row(['No', 'Ticker', 'Mkt %', 'Shares', 'Bid Quantity', 'Bid Price',
+                         'Ask Price', 'Ask Quantity', 'Last Sale Price', 'Last Sale Quantity'])
+
+        table_.pop(0)  # off header
+        for wr in table_:
+            self._write_row(wr)
 
     @staticmethod
     def _scrape_table(table):
@@ -70,11 +82,19 @@ class Scrape:
                     dsplit = d.split(u'\xd7')
                     row_data.append(dsplit[0].strip())
                     row_data.append(dsplit[1].strip())
+                elif d.count('%'):
+                    row_data.append(d.rstrip('%'))
                 else:
                     row_data.append(d)
             tbl_data.append(row_data)
             logger.info('Scraped row data: {}'.format(row_data))
         return tbl_data
+
+    def _write_row(self, row):
+        with open(self.csv_file, 'ab') as hlr:
+            wrt = csv.writer(hlr, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+            wrt.writerow(row)
+            logger.info('Add row: {}'.format(row))
 
     def tear_down(self):
         if self.driver:
