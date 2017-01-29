@@ -38,7 +38,7 @@ class Scrape:
         else:
             self.csv_file = "{}_{}.csv".format(time.strftime("%Y%m%d%H%M", time.localtime()), 'top')
 
-        for _ in range(60):
+        for _ in range(30):
             page_source = self.driver.page_source
             soup = BeautifulSoup(page_source, 'lxml')
             table = soup.find("table", {"id": "quotesTable"})
@@ -49,8 +49,8 @@ class Scrape:
             else:
                 time.sleep(1)
         else:
-            logger.info('Did not scrape table. Is the site live?')
-            sys.exit(1)
+            logger.info('Is the site live? Found placeholders on page. Scrape either way')
+            table_ = self._scrape_table(table, True)
 
         self._write_row(['No', 'Ticker', 'Mkt %', 'Shares', 'Bid Quantity', 'Bid Price',
                          'Ask Price', 'Ask Quantity', 'Last Sale Price', 'Last Sale Quantity'])
@@ -60,7 +60,7 @@ class Scrape:
             self._write_row(wr)
 
     @staticmethod
-    def _scrape_table(table):
+    def _scrape_table(table, force=False):
 
         rows = table.findAll("tr")
 
@@ -69,9 +69,10 @@ class Scrape:
             tds_ = row.find_all("td")
             row_data = []
             for ctr, td in enumerate(tds_):
-                if td.text.strip().count('-'):
-                    logger.info('Table not ready for scraping yet')
-                    return False
+                if td.text.strip().count('-') and not td.text.strip().count('--:--:'):
+                    if not force:
+                        logger.info('Table not ready for scraping')
+                        return False
                 # drop time
                 if ctr in [1, 6]:
                     d = td.text.strip()[:-8]
@@ -105,11 +106,15 @@ class Scrape:
         self.driver.get(self.site_url)
 
         try:
+            o = []
             op_el = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "lists")))
             select = Select(op_el)
             opts_ = select.options
             for opt_ in opts_:
-                logger.info('report: {}'.format(opt_.get_attribute('value')))
+                option = opt_.get_attribute('value')
+                logger.info('report: {}'.format(option))
+                o.append(option)
+            return o
         except TimeoutException:
             logger.error('Is the page live? Timed out on the reports select element')
 
@@ -158,5 +163,10 @@ if __name__ == '__main__':
         scrape.tear_down()
         sys.exit(1)
 
-    scrape.scrape_soup(report)
+    if report != 'all':
+        scrape.scrape_soup(report)
+    else:
+        for option_ in scrape.stdout_options():
+            if option_ != 'mylist':
+                scrape.scrape_soup(option_)
     scrape.tear_down()
