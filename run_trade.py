@@ -5,6 +5,7 @@ from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support import expected_conditions as EC
+from pyvirtualdisplay import Display
 from sys import platform
 from selenium.webdriver.common.by import By
 import logging
@@ -25,7 +26,11 @@ class Scrape:
         self.csv_file = None
         if platform == 'darwin':  # OSX
             self.driver = webdriver.Chrome()
-        else:
+        elif platform == 'linux' or platform == 'linux2':  # headless
+            self.display = Display(visible=0, size=(800, 600))
+            self.display.start()
+            self.driver = webdriver.Chrome()
+        else:  # windows
             self.driver = webdriver.Chrome('chromedriver.exe')
 
     def scrape_soup(self, r):
