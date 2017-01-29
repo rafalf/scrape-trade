@@ -41,5 +41,5 @@ __Selenium__:
 * ```pip install -U selenium```
 If it happens that you are on a Windows machine, chromedriver.exe is included in the project.
 For OSX, please download chromedriver.exe from https://sites.google.com/a/chromium.org/chromedriver/
-and drop it in ```/usr/bin/``` or any dir exists on the PATH
+and drop it in ```/usr/bin/``` or any dir which exists on the PATH
 
